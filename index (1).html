@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Артём Гареев • Telegram / MAX боты</title>
+<style>
+  :root{
+    --side-bg:#ffffff; --side-hover:#f4f4f5; --search-bg:#f1f1f1;
+    --header-bg:#ffffff; --chat-bg:#dbe6f0; --border:#e7e7e7;
+    --bubble-in:#ffffff; --bubble-out:#effdde; --text:#000000;
+    --secondary:#707579; --accent:#3390ec; --check:#4fae4e;
+    --kb-bg:rgba(0,0,0,.05); --kb-text:#3390ec; --input-bg:#ffffff;
+    --pattern-opacity:.5;
+  }
+  [data-theme="dark"]{
+    --side-bg:#17212b; --side-hover:#202b36; --search-bg:#242f3d;
+    --header-bg:#17212b; --chat-bg:#0e1621; --border:#101921;
+    --bubble-in:#182533; --bubble-out:#2b5278; --text:#f5f5f5;
+    --secondary:#7d8b99; --accent:#5eb5f7; --check:#5eb5f7;
+    --kb-bg:rgba(255,255,255,.08); --kb-text:#5eb5f7; --input-bg:#17212b;
+    --pattern-opacity:.35;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--chat-bg); color:var(--text); overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex; height:100vh; height:100dvh; position:relative;}
+  
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    width:360px; min-width:360px; background:var(--side-bg);
+    border-right:1px solid var(--border); display:flex; flex-direction:column;
+    z-index:2;
+  }
+      50%{opacity:1;}
+  }
+      to{opacity:1; transform:translateY(0);}
+  }
+      50%{transform:translateY(-2px);}
+  }
+      50%{transform:scale(0.95);}
+    100%{transform:scale(1);}
+  }
+      100%{background-position:200% 0;}
+  }
+
+  .side-head{display:flex; align-items:center; gap:10px; padding:9px 12px;}
+  .icon-btn{
+    width:40px; height:40px; border-radius:50%; border:none; background:transparent;
+    color:var(--secondary); cursor:pointer; display:flex; align-items:center;
+    justify-content:center; font-size:19px; flex-shrink:0; transition:.15s;
+  }
+  .icon-btn:hover{background:var(--side-hover);}
+  .search{
+    flex:1; display:flex; align-items:center; gap:8px;
+    background:var(--search-bg); border-radius:20px; padding:8px 14px;
+  }
+  .search svg{width:17px; height:17px; stroke:var(--secondary); flex-shrink:0;}
+  .search input{
+    flex:1; border:none; background:transparent; outline:none;
+    font-size:14.5px; color:var(--text); font-family:inherit; min-width:0;
+  }
+  .chat-list{flex:1; overflow-y:auto; padding:2px 8px 8px;}
+  .chat-item{
+    display:flex; gap:12px; padding:9px 10px; cursor:pointer;
+    border-radius:11px; transition:background .12s, transform .1s; align-items:center;
+    
+  }
+  .chat-item:hover{background:var(--side-hover); }
+  .chat-item.active{background:var(--accent); }
+  .chat-item.active{background:var(--accent);}
+  .chat-item.active .chat-name, .chat-item.active .chat-preview,
+  .chat-item.active .chat-time{color:#fff;}
+  .chat-item.active .badge{background:#fff; color:var(--accent);}
+  .avatar{
+    width:54px; height:54px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:24px; font-weight:600; user-select:none;
+  }
+  .avatar.sm{width:42px; height:42px; font-size:19px;}
+  .chat-meta{flex:1; min-width:0;}
+  .chat-top{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .chat-name{font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .chat-time{font-size:12px; color:var(--secondary); flex-shrink:0;}
+  .chat-bottom{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:3px;}
+  .chat-preview{
+    font-size:14px; color:var(--secondary); white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; flex:1;
+  }
+  .badge{
+    background:var(--accent); color:#fff; border-radius:12px;
+    min-width:22px; height:22px; padding:0 6px; font-size:12.5px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .pin-icon{color:var(--secondary); font-size:13px; flex-shrink:0;}
+  .side-foot{
+    padding:10px 16px; font-size:12px; color:var(--secondary);
+    border-top:1px solid var(--border); text-align:center;
+  }
+
+  /* ---------- CHAT PANE ---------- */
+  .chat-pane{flex:1; display:flex; flex-direction:column; min-width:0; background:var(--chat-bg);}
+  .chat-head{
+    height:58px; background:var(--header-bg); border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:12px; padding:0 16px; flex-shrink:0; z-index:3;
+  }
+  .back-btn{display:none;}
+  .head-meta{flex:1; min-width:0;}
+  .head-name{font-size:15.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .head-status{font-size:13px; color:var(--secondary); margin-top:1px;}
+  .head-status.online{color:var(--accent);}
+  .chat-bodies{flex:1; min-height:0; display:flex; position:relative;}
+  .chat-body{flex:1; display:none; flex-direction:column; min-width:0;}
+  .chat-body.active{display:flex;}
+  .messages{
+    flex:1; overflow-y:auto; padding:18px 10%;
+    display:flex; flex-direction:column; gap:0;
+background: linear-gradient(180deg, var(--chat-bg), rgba(0,0,0,.02)), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22260%22%20height%3D%22260%22%20viewBox%3D%220%200%20260%20260%22%3E%0A%3Cg%20fill%3D%22%235b6b7b%22%20fill-opacity%3D%220.12%22%20font-family%3D%22monospace%22%20font-size%3D%2213%22%20text-anchor%3D%22middle%22%3E%0A%3Ctext%20x%3D%2235%22%20y%3D%2235%22%3E%26lt%3B%2F%26gt%3B%3C%2Ftext%3E%0A%3Ctext%20x%3D%22225%22%20y%3D%2245%22%3E%26gt%3B_%3C%2Ftext%3E%0A%3Ctext%20x%3D%2255%22%20y%3D%2295%22%3E%7B%7D%3C%2Ftext%3E%0A%3Ctext%20x%3D%22205%22%20y%3D%22115%22%3E%28%29%3C%2Ftext%3E%0A%3Ctext%20x%3D%2295%22%20y%3D%22155%22%3E%26lt%3B%26gt%3B%3C%2Ftext%3E%0A%3Ctext%20x%3D%22135%22%20y%3D%22175%22%3EDB%3C%2Ftext%3E%0A%3Ctext%20x%3D%22245%22%20y%3D%2275%22%3EAPI%3C%2Ftext%3E%0A%3Ctext%20x%3D%2245%22%20y%3D%22125%22%3E%2F%2F%3C%2Ftext%3E%0A%3Ctext%20x%3D%22235%22%20y%3D%22145%22%3E%28%29%3C%2Ftext%3E%0A%3Ctext%20x%3D%2275%22%20y%3D%2265%22%3E%26lt%3B%26gt%3B%3C%2Ftext%3E%0A%3Ctext%20x%3D%2225%22%20y%3D%22175%22%3Eimport%3C%2Ftext%3E%0A%3Ctext%20x%3D%22235%22%20y%3D%22185%22%3Eexport%3C%2Ftext%3E%0A%3Ctext%20x%3D%22115%22%20y%3D%2255%22%3Econst%3C%2Ftext%3E%0A%3Ctext%20x%3D%2285%22%20y%3D%22105%22%3Elet%3C%2Ftext%3E%0A%3Ctext%20x%3D%22145%22%20y%3D%2225%22%3Efn%3C%2Ftext%3E%0A%3Ctext%20x%3D%22195%22%20y%3D%22155%22%3Ereturn%3C%2Ftext%3E%0A%3Ctext%20x%3D%2265%22%20y%3D%22145%22%3Eif%3C%2Ftext%3E%0A%3Ctext%20x%3D%22165%22%20y%3D%22185%22%3Eelse%3C%2Ftext%3E%0A%3Ctext%20x%3D%22105%22%20y%3D%22205%22%3Etry%3C%2Ftext%3E%0A%3Ctext%20x%3D%22215%22%20y%3D%22205%22%3Ecatch%3C%2Ftext%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E");
+  }
+  .date-sep{
+    align-self:center; background:rgba(0,0,0,.16); color:#fff;
+    font-size:12.5px; padding:4px 12px; border-radius:14px; margin:6px 0 10px;
+    font-weight:500;
+  }
+  .msg{display:flex; animation:pop .2s ease; margin-bottom:14px;}
+  .msg.out{justify-content:flex-end;}
+  .msg-col{display:flex; flex-direction:column; max-width:74%; min-width:0;}
+  .msg.out .msg-col{align-items:flex-end;}
+  .bubble{
+    max-width:100%; padding:8px 12px; border-radius:13px;
+    font-size:14.5px; line-height:1.45; position:relative;
+    box-shadow:0 1px 1px rgba(0,0,0,.09); word-wrap:break-word;
+  }
+  .msg.in .bubble{background:var(--bubble-in); border-bottom-left-radius:4px;}
+  .msg.out .bubble{background:var(--bubble-out); border-bottom-right-radius:4px;}
+  .bubble b{font-weight:600;}
+  .bubble .muted{color:var(--secondary); font-size:13px;}
+  .meta-line{
+    display:flex; align-items:center; gap:5px;
+    font-size:11px; color:var(--secondary);
+    margin-top:4px; padding:0 4px; line-height:1;
+  }
+  .msg.out .meta-line{justify-content:flex-end;}
+  .checks{font-size:12px; letter-spacing:-2px; color:var(--check);}
+  .keyboard{display:flex; flex-direction:column; gap:5px; margin-top:8px; width:100%;}
+  .kb-row{display:flex; gap:4px;}
+  .kb-btn{
+    flex:1; background:var(--kb-bg); border:none; border-radius:8px;
+    padding:9px 6px; font-size:13.5px; color:var(--kb-text); cursor:pointer;
+    font-family:inherit; transition:.13s; line-height:1.25; font-weight:500;
+    position:relative; overflow:hidden;
+  }
+  .kb-btn:hover{filter:brightness(.94); }
+  .kb-btn:active{}
+  .keyboard.used{opacity:.5;}
+  .keyboard.used .kb-btn{pointer-events:none;}
+  .typing .bubble{display:flex; gap:5px; padding:14px 15px; align-items:center;}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--secondary); animation:blink 1.2s infinite;}
+  .dot:nth-child(2){animation-delay:.2s;}
+  .dot:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+  @keyframes pop{from{opacity:0; transform:translateY(5px);}to{opacity:1; transform:none;}}
+
+  .inputbar{
+    display:flex; align-items:center; gap:6px; padding:8px 14px;
+    background:var(--input-bg); flex-shrink:0;
+  }
+  .inputbar input{
+    flex:1; border:none; background:transparent; outline:none;
+    font-size:15px; color:var(--text); font-family:inherit; padding:10px 4px; min-width:0;
+  }
+  .send-btn{
+    width:42px; height:42px; border-radius:50%; border:none;
+    background:var(--accent); color:#fff; cursor:pointer; font-size:18px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:.15s;
+  }
+  .send-btn:hover{filter:brightness(1.08);}
+  .channel-bar{
+    padding:13px; text-align:center; background:var(--input-bg);
+    color:var(--accent); font-weight:600; font-size:14.5px; cursor:pointer;
+    flex-shrink:0; border-top:1px solid var(--border); user-select:none;
+  }
+  .channel-bar:hover{background:var(--side-hover);}
+
+  /* ---------- CALC MODAL ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--side-bg); border-radius:16px; width:100%; max-width:440px;
+    padding:22px; box-shadow:0 16px 50px rgba(0,0,0,.3); max-height:90vh; overflow-y:auto;
+  }
+  .modal h3{font-size:18px; margin-bottom:4px;}
+  .modal .sub{font-size:13px; color:var(--secondary); margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; color:var(--secondary); margin-bottom:6px; font-weight:500;}
+  .field input, .field select{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+    background:var(--search-bg); color:var(--text); font-size:14.5px; font-family:inherit; outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--accent);}
+  .radio-row{display:flex; gap:8px;}
+  .radio-row{display:flex; flex-direction:column; gap:6px;}
+  .radio-row label{
+    display:flex; align-items:center; gap:8px; padding:10px;
+    border:1px solid var(--border); border-radius:10px; cursor:pointer;
+    font-size:13.5px; color:var(--text); margin:0;
+  }
+  .radio-row input{accent-color:var(--accent); flex-shrink:0;}
+  .radio-row input{accent-color:var(--accent);}
+  /* ---------- CALCULATOR ---------- */
+  .calc-header{
+    display:flex; gap:14px; align-items:flex-start; margin-bottom:18px;
+  }
+  .calc-emoji{font-size:28px; flex-shrink:0;}
+  .calc-title{display:flex; flex-direction:column; gap:4px;}
+  .calc-title-main{font-size:18px; font-weight:700; color:var(--text); margin:0;}
+  .calc-title-sub{font-size:13px; color:var(--secondary); margin:0;}
+
+  .calc-field{margin-bottom:16px;}
+  .calc-label{
+    display:block; font-size:13px; color:var(--secondary); margin-bottom:8px;
+    font-weight:500;
+  }
+  .calc-select, .calc-input{
+    width:100%; padding:11px 14px; border-radius:10px; border:1px solid var(--border);
+    background:var(--search-bg); color:var(--text); font-size:14.5px; font-family:inherit;
+    outline:none; box-sizing:border-box;
+  }
+  .calc-select:focus, .calc-input:focus{border-color:var(--accent);}
+  .calc-hint{
+    display:block; font-size:11.5px; color:var(--secondary); margin-top:5px;
+    line-height:1.4;
+  }
+
+  .calc-radio-group{display:flex; flex-direction:column; gap:8px;}
+  .calc-radio{
+    display:flex; align-items:center; gap:10px; padding:11px 14px;
+    border:1px solid var(--border); border-radius:10px; cursor:pointer;
+    font-size:14px; color:var(--text); transition:.15s;
+  }
+  .calc-radio:hover{border-color:var(--accent); background:rgba(51,144,236,.05);}
+  .calc-radio input{accent-color:var(--accent); width:18px; height:18px; flex-shrink:0;}
+  .calc-radio-check{
+    width:18px; height:18px; border:2px solid var(--border); border-radius:50%;
+    flex-shrink:0; transition:.15s;
+  }
+  .calc-radio input:checked + .calc-radio-check{
+    border-color:var(--accent); background:var(--accent);
+    position:relative;
+  }
+  .calc-radio input:checked + .calc-radio-check::after{
+    content:''; position:absolute; top:50%; left:50%;
+    width:7px; height:7px; background:#fff; border-radius:50%;
+    transform:translate(-50%,-50%);
+  }
+
+  .calc-result{
+    background:var(--search-bg); border-radius:12px; padding:16px; margin-top:8px;
+  }
+  .calc-line{display:flex; justify-content:space-between; font-size:13.5px; padding:5px 0; color:var(--secondary);}
+  .calc-line b{color:var(--text);}
+  .calc-total{
+    display:flex; justify-content:space-between; align-items:center;
+    border-top:1px solid var(--border); margin-top:10px; padding-top:10px;
+    font-size:16px; font-weight:700;
+  }
+  .calc-total span:last-child{color:var(--accent); font-size:20px;}
+  .calc-note{font-size:12px; color:var(--secondary); margin-top:10px; line-height:1.45;}
+  .calc-close{
+    width:100%; margin-top:20px; padding:13px; border:none; border-radius:11px;
+    background:var(--accent); color:#fff; font-size:15px; font-weight:600;
+    cursor:pointer; font-family:inherit; transition:.15s;
+  }
+  .calc-close:hover{filter:brightness(1.08);}
+  .calc-disclaimer{
+    font-size:11px; color:var(--secondary); margin-top:14px; text-align:center;
+    line-height:1.4;
+  }
+
+  ::-webkit-scrollbar{width:6px;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(120,130,140,.35); border-radius:3px;}
+
+  /* ---------- MOBILE ---------- */
+  @media (max-width:860px){
+    .app{padding-top:56px;}
+    .top-header{height:56px;}
+    .top-header .avatar{width:36px; height:36px; font-size:16px;}
+    .top-header .title{font-size:16px;}
+    .top-header .subtitle{font-size:10px; display:none;}
+    .sidebar{width:100%; min-width:0; border-right:none;}
+    .chat-pane{
+      position:absolute; inset:0; z-index:10;
+      transform:translateX(100%); transition:transform .26s cubic-bezier(.25,.8,.35,1);
+    }
+    .app.chat-open .chat-pane{transform:translateX(0);}
+    .back-btn{display:flex;}
+    .messages{padding:14px 4%;}
+    .msg-col{max-width:86%;}
+    .side-foot{display:none;}
+    .chat-head{padding:0 10px;}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="sidebar">
+    <div class="side-head">
+      <button class="icon-btn" id="themeBtn" title="Сменить тему">☾</button>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="searchInput" type="text" placeholder="Поиск" autocomplete="off">
+      </div>
+    </div>
+    <div class="chat-list" id="chatList"></div>
+    <div class="side-foot">Портфолио • Артём Гареев • Telegram / MAX боты</div>
+  </aside>
+
+  <main class="chat-pane">
+    <div class="chat-head">
+      <button class="icon-btn back-btn" id="backBtn" title="Назад">←</button>
+      <div class="avatar sm" id="headAvatar">А</div>
+      <div class="head-meta">
+        <div class="head-name" id="headName">Артём Гареев</div>
+        <div class="head-status" id="headStatus">бот</div>
+      </div>
+      <button class="icon-btn" title="Поиск">⌕</button>
+      <button class="icon-btn" title="Ещё">⋮</button>
+    </div>
+    <div class="chat-bodies" id="chatBodies"></div>
+  </main>
+</div>
+
+<!-- Калькулятор поддержки -->
+<div class="modal-overlay" id="calcModal">
+  <div class="modal">
+    <div class="calc-header">
+      <span class="calc-emoji">🧮</span>
+      <div class="calc-title">
+        <div class="calc-title-main">Калькулятор поддержки</div>
+        <div class="calc-title-sub">Прикидка ежемесячного платежа • точная смета — после созвона</div>
+      </div>
+    </div>
+
+    <div class="calc-field">
+      <label class="calc-label">Тариф поддержки</label>
+      <select id="calcTariff" class="calc-select">
+        <option value="start">Старт — 7 900 ₽/мес</option>
+        <option value="business">Бизнес — 15 900 ₽/мес</option>
+        <option value="ai">AI / LLM — 22 900 ₽/мес</option>
+      </select>
+    </div>
+
+    <div class="calc-field">
+      <label class="calc-label">Активных пользователей в месяц</label>
+      <input id="calcUsers" type="number" min="0" value="200" class="calc-input">
+      <span class="calc-hint">Сколько человек будут писать боту в месяц</span>
+    </div>
+
+    <div class="calc-field">
+      <label class="calc-label">Сообщений на пользователя в месяц</label>
+      <input id="calcMsgs" type="number" min="0" value="50" class="calc-input">
+      <span class="calc-hint">Среднее: 20–100 сообщений на одного клиента</span>
+    </div>
+
+    <div class="calc-field">
+      <label class="calc-label">Чей аккаунт OpenRouter</label>
+      <div class="calc-radio-group">
+        <label class="calc-radio">
+          <input type="radio" name="calcAcc" value="client" checked>
+          <span class="calc-radio-check"></span>
+          <span>Клиента</span>
+        </label>
+        <label class="calc-radio">
+          <input type="radio" name="calcAcc" value="artem">
+          <span class="calc-radio-check"></span>
+          <span>Мой (через меня)</span>
+        </label>
+      </div>
+      <span class="calc-hint">Клиента — вы платите OpenRouter напрямую, я не трачу свои деньги.<br>Мой — я вношу депозит заранее и трачу только его.</span>
+    </div>
+
+    <div class="calc-result">
+      <div class="calc-line"><span>База тарифа</span><b id="calcBase">—</b></div>
+      <div class="calc-line" id="calcTokenRow" style="display:none"><span>Токены OpenRouter</span><b id="calcTokenCost">—</b></div>
+      <div class="calc-total"><span>Итого в месяц</span><span id="calcTotal">—</b></div>
+      <div class="calc-note" id="calcNote"></div>
+    </div>
+
+    <button class="calc-close" id="calcClose">Понятно</button>
+    <div class="calc-disclaimer">Прикидка, не оферта. Точная смета — после созвона.</div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   НАСТРОЙКИ — замени под себя перед публикацией
+   ========================================================= */
+const CONFIG = {
+  name: 'Артём Гареев',
+  telegram: 'llxstdxx',               // твой ник в Telegram
+  prices: { simple:'от 7 000 ₽', business:'от 18 000 ₽', llm:'от 25 000 ₽', max:'от 12 000 ₽' },
+  support: { start:7900, business:15900, ai:22900 },
+  services: [
+    {label:'💇 Стрижка — 1 500 ₽', name:'Стрижка', price:1500},
+    {label:'🧔 Борода — 1 000 ₽', name:'Борода', price:1000},
+    {label:'💈 Комплекс — 2 200 ₽', name:'Комплекс', price:2200}
+  ],
+  products: [
+    {label:'☕ Капучино — 220 ₽', name:'Капучино', price:220},
+    {label:'🍵 Матча — 260 ₽', name:'Матча', price:260},
+    {label:'🥐 Круассан — 180 ₽', name:'Круассан', price:180}
+  ]
+};
+
+/* ---------- chats ---------- */
+const CHATS = [
+  {id:'artem',  name:'Артём Гареев',        avatar:'💻', color:'#e17076', type:'person', status:'разработчик ботов • онлайн', preview:'Привет! Я делаю ботов для Telegram и MAX…', time:'12:00', pinned:true, unread:0},
+  {id:'llm',    name:'LLM-ассистент • демо', avatar:'🤖', color:'#7bc862', type:'bot', status:'бот • демо-режим', preview:'Спроси меня про цены, поддержку или модели', time:'12:01', unread:1},
+
+  {id:'booking',name:'Бот записи • демо',    avatar:'📊', color:'#65aadd', type:'bot', status:'бот • онлайн', preview:'Запись в барбершоп: услуга → день → время', time:'12:02', unread:1},
+  {id:'shop',   name:'Бот-магазин • демо',   avatar:'🛍️', color:'#ee7aae', type:'bot', status:'бот • онлайн', preview:'Каталог, корзина и заказ кофейни', time:'12:03', unread:0},
+  {id:'quiz',   name:'Квиз-бот • демо',      avatar:'🧩', color:'#faa774', type:'bot', status:'бот • онлайн', preview:'Подберёт бота под задачу за 2 вопроса', time:'12:04', unread:0},
+  {id:'cases',  name:'Кейсы',                avatar:'📋', color:'#a695e7', type:'channel', status:'канал • демо-проекты', preview:'Что я уже собрал — честно, без прикрас', time:'12:05', unread:3},
+  {id:'support',name:'Поддержка ботов',      avatar:'🔧', color:'#6ec9cb', type:'channel', status:'канал • тарифы и SLA', preview:'Абонентка, токены, отчёты и SLA', time:'12:06', unread:1},
+  {id:'prices', name:'Услуги и цены',        avatar:'💎', color:'#e0a2f3', type:'channel', status:'канал • разработка', preview:'Разработка, LLM, перенос в MAX', time:'12:07', unread:0}
+];
+
+const state = { active:null, opened:new Set(), booking:{}, cart:[], quiz:{}, order:1041, muted:{} };
+const queues = {};
+const $ = id => document.getElementById(id);
+const app = $('app');
+
+function nowTime(){ return new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
+function money(n){ return Math.round(n).toLocaleString('ru-RU') + ' ₽'; }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function strip(html){ const d=document.createElement('div'); d.innerHTML=html; return d.textContent||''; }
+function chatById(id){ return CHATS.find(c=>c.id===id); }
+
+/* ---------- build sidebar + bodies ---------- */
+function avatarHtml(c, sm){
+  return '<div class="avatar'+(sm?' sm':'')+'" style="background:'+c.color+'">'+c.avatar+'</div>';
+}
+function buildUI(){
+  const list = $('chatList');
+  const bodies = $('chatBodies');
+  CHATS.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'chat-item';
+    item.dataset.id = c.id;
+    item.innerHTML =
+      avatarHtml(c,false) +
+      '<div class="chat-meta">' +
+        '<div class="chat-top"><div class="chat-name">'+esc(c.name)+'</div><div class="chat-time">'+c.time+'</div></div>' +
+        '<div class="chat-bottom"><div class="chat-preview">'+esc(c.preview)+'</div>' +
+        (c.unread ? '<div class="badge">'+c.unread+'</div>' : (c.pinned ? '<div class="pin-icon">📌</div>' : '')) +
+        '</div></div>';
+    item.onclick = () => openChat(c.id);
+    list.appendChild(item);
+
+    const body = document.createElement('div');
+    body.className = 'chat-body';
+    body.dataset.chat = c.id;
+    const msgs = document.createElement('div');
+    msgs.className = 'messages';
+    msgs.innerHTML = '<div class="date-sep">Сегодня</div>';
+    body.appendChild(msgs);
+
+    if(c.type === 'channel'){
+      const bar = document.createElement('div');
+      bar.className = 'channel-bar';
+      bar.textContent = '🔔 Отключить уведомления';
+      bar.onclick = () => {
+        state.muted[c.id] = !state.muted[c.id];
+        bar.textContent = state.muted[c.id] ? '🔕 Включить уведомления' : '🔔 Отключить уведомления';
+      };
+      body.appendChild(bar);
+    } else {
+      const bar = document.createElement('form');
+      bar.className = 'inputbar';
+      bar.innerHTML =
+        '<button type="button" class="icon-btn" title="Прикрепить">📎</button>' +
+        '<input type="text" placeholder="Написать сообщение…" autocomplete="off">' +
+        '<button type="button" class="icon-btn" title="Эмодзи">😊</button>' +
+        '<button type="submit" class="send-btn" title="Отправить">➤</button>';
+      bar.onsubmit = e => {
+        e.preventDefault();
+        const inp = bar.querySelector('input');
+        const v = inp.value.trim();
+        if(!v) return;
+        inp.value = '';
+        msgsEl(c.id).querySelectorAll('.keyboard').forEach(k=>k.remove());
+        addMsg(c.id, esc(v), 'out');
+        handleText(c.id, v);
+      };
+      body.appendChild(bar);
+    }
+    bodies.appendChild(body);
+  });
+}
+
+/* ---------- messages ---------- */
+function msgsEl(id){ return document.querySelector('.chat-body[data-chat="'+id+'"] .messages'); }
+function scrollBottom(id){ const m=msgsEl(id); if(m) m.scrollTop=m.scrollHeight; }
+function lockKeyboards(id){
+  msgsEl(id).querySelectorAll('.keyboard:not(.used)').forEach(k=>k.classList.add('used'));
+}
+function addMsg(id, html, dir, opts){
+  opts = opts||{};
+  const m = msgsEl(id);
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ' + (dir==='out'?'out':'in');
+  const col = document.createElement('div');
+  col.className = 'msg-col';
+  const bub = document.createElement('div');
+  bub.className = 'bubble';
+  bub.innerHTML = html;
+  col.appendChild(bub);
+  if(opts.kb) attachKeyboard(id, col, opts.kb, opts.excludeAction);
+  const meta = document.createElement('div');
+  meta.className = 'meta-line';
+  meta.innerHTML = dir==='out'
+    ? '<span>'+nowTime()+'</span><span class="checks">✓✓</span>'
+    : (opts.views? '<span>👁 '+opts.views+'</span>':'') + '<span>'+nowTime()+'</span>';
+  col.appendChild(meta);
+  wrap.appendChild(col);
+  m.appendChild(wrap);
+  updatePreview(id, html);
+  scrollBottom(id);
+  return bub;
+}
+function attachKeyboard(id, col, rows, excludeAction){
+  const kb = document.createElement('div');
+  kb.className = 'keyboard';
+  rows.forEach(row => {
+    const r = document.createElement('div');
+    r.className = 'kb-row';
+    row.forEach(b => {
+      if(excludeAction && b.a === excludeAction) return; // нажатую кнопку не показываем снова
+      const btn = document.createElement('button');
+      btn.type='button'; btn.className='kb-btn'; btn.textContent=b.t;
+      btn.onclick = () => {
+        if(b.nav){ openChat(b.nav); return; }
+        if(b.a==='calc'){ openCalc(); return; }
+        kb.remove();
+        addMsg(id, esc(b.t), 'out');
+        handleAction(id, b.a);
+      };
+      r.appendChild(btn);
+    });
+    kb.appendChild(r);
+  });
+  col.appendChild(kb);
+  scrollBottom(id);
+}
+function updatePreview(id, html){
+  const c = chatById(id);
+  c.preview = strip(html).slice(0,64);
+  c.time = nowTime();
+  const item = document.querySelector('.chat-item[data-id="'+id+'"]');
+  if(item){
+    item.querySelector('.chat-preview').textContent = c.preview;
+    item.querySelector('.chat-time').textContent = c.time;
+  }
+}
+function setTyping(id, on){
+  const m = msgsEl(id);
+  let t = m.querySelector('.typing');
+  const c = chatById(id);
+  if(on){
+    if(state.active===id){ $('headStatus').textContent='печатает…'; $('headStatus').classList.add('online'); }
+    if(!t){
+      t=document.createElement('div');
+      t.className='msg in typing';
+      t.innerHTML='<div class="msg-col"><div class="bubble"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div></div>';
+      m.appendChild(t);
+      scrollBottom(id);
+    }
+  } else {
+    if(state.active===id){ $('headStatus').textContent=c.status; $('headStatus').classList.toggle('online', c.type!=='channel'); }
+    if(t) t.remove();
+  }
+}
+function botSay(id, html, kb, delay, opts){
+  if(delay===undefined) delay=620;
+  queues[id] = (queues[id]||Promise.resolve()).then(()=>new Promise(resolve=>{
+    setTyping(id,true);
+    setTimeout(()=>{
+      setTyping(id,false);
+      addMsg(id, html, 'in', Object.assign({kb}, opts||{}));
+      if(opts && opts.lockKeyboard) lockKeyboards(id);
+      resolve();
+    }, delay);
+  }));
+  return queues[id];
+}
+
+/* ---------- navigation ---------- */
+function openChat(id){
+  const c = chatById(id);
+  state.active = id;
+  document.querySelectorAll('.chat-item').forEach(i=>i.classList.toggle('active', i.dataset.id===id));
+  document.querySelectorAll('.chat-body').forEach(b=>b.classList.toggle('active', b.dataset.chat===id));
+  $('headAvatar').outerHTML = avatarHtml(c,true).replace('class="avatar sm"','class="avatar sm" id="headAvatar"');
+  $('headName').textContent = c.name;
+  $('headStatus').textContent = c.status;
+  $('headStatus').classList.toggle('online', c.type!=='channel');
+  c.unread = 0;
+  const badge = document.querySelector('.chat-item[data-id="'+id+'"] .badge');
+  if(badge) badge.remove();
+  app.classList.add('chat-open');
+  if(!state.opened.has(id)){
+    state.opened.add(id);
+    initChat(id);
+  }
+  scrollBottom(id);
+  const inp = document.querySelector('.chat-body[data-chat="'+id+'"] input');
+  if(inp && window.innerWidth>860) inp.focus();
+}
+$('backBtn').onclick = () => app.classList.remove('chat-open');
+
+/* ---------- actions ---------- */
+function handleAction(id, action){
+  if(!action) return;
+  if(action==='contact'){
+    const c = chatById(id);
+    if(c && c.type==='channel'){ openChat('artem'); showContact('artem'); }
+    else showContact(id);
+    return;
+  }
+  if(action==='calc'){ openCalc(); return; }
+  if(action.startsWith('open:')){ openChat(action.slice(5)); return; }
+  const h = handlers[id];
+  if(h) h(action);
+}
+function handleText(id, text){
+  const s = text.toLowerCase().trim();
+  if(id==='llm'){ llmText(s); return; }
+
+  // Текстовый ввод в процессе оформления заявок
+  if(state.booking && state.booking.step==='name'){
+    state.booking.name = text;
+    state.booking.step = 'phone';
+    botSay('booking','Отлично, <b>'+text+'</b>! А теперь пришли свой номер телефона (например: +7 999 123-45-67).');
+    return;
+  }
+  if(state.booking && state.booking.step==='phone'){
+    state.booking.phone = text;
+    state.booking.step = 'day';
+    botSay('booking','Телефон <b>'+text+'</b> принят.<br>На какой день записать?',[
+      [{t:'Сегодня', a:'day:сегодня'}, {t:'Завтра', a:'day:завтра'}, {t:'Послезавтра', a:'day:послезавтра'}]
+    ]);
+    return;
+  }
+  if(state.shop && state.shop.step==='qty'){
+    const qty = parseInt(text,10);
+    if(!qty || qty<1){ botSay('shop','Напиши цифру — сколько штук добавить?'); return; }
+    state.shop.qty = qty;
+    state.shop.step = 'address';
+    botSay('shop','Количество: <b>'+qty+'</b> шт.<br>Укажи адрес доставки (или напиши «самовывоз»):');
+    return;
+  }
+  if(state.shop && state.shop.step==='address'){
+    state.shop.address = text;
+    state.shop.step = 'phone';
+    botSay('shop','Адрес: <b>'+text+'</b>.<br>Оставь свой номер телефона для связи:');
+    return;
+  }
+  if(state.shop && state.shop.step==='phone'){
+    state.shop.phone = text;
+    state.shop.step = 'confirm';
+    finishShopOrder();
+    return;
+  }
+  if(state.quiz && state.quiz.step==='name'){
+    state.quiz.name = text;
+    state.quiz.step = 'contact';
+    botSay('quiz','Принято, <b>'+text+'</b>! Оставь свой контакт (телефон или Telegram), чтобы я мог с тобой связаться:');
+    return;
+  }
+  if(state.quiz && state.quiz.step==='contact'){
+    state.quiz.contact = text;
+    finishQuiz();
+    return;
+  }
+
+  if(/меню|старт|start|привет/.test(s)){ handlers[id] && handlers[id]('menu'); return; }
+  if(/цен|стоим/.test(s)){ openChat('prices'); return; }
+  if(/поддерж|тариф|sla/.test(s)){ openChat('support'); return; }
+  if(/контакт|связ|связаться/.test(s)){ showContact(id); return; }
+  if(/кейс|проект|портфолио/.test(s)){ openChat('cases'); return; }
+  if(handlers[id]) handlers[id]('text:'+text);
+}
+
+/* ---------- contact ---------- */
+function showContact(id){
+  const msg = 'Привет, Артём! Посмотрел портфолио — хочу обсудить бота.';
+  botSay(id,
+    '💬 <b>Связаться со мной</b><br><br>Telegram: <b>@'+CONFIG.telegram+'</b><br>Email: <b>lxstdx@icloud.com</b><br><br>' +
+    '<b>MAX-боты:</b> для разработки под MAX у клиента обязательно должен быть бизнес-аккаунт (ИП/самозанятый/юридическое лицо) на business.max.ru. Я пишу код под токен клиента, свой ИП не нужен.<br>' +
+    '<span class="muted">Отвечаю обычно в течение дня. Можно сразу написать:</span>',
+    [[{t:'📩 Открыть Telegram', a:'tg_open'}, {t:'📋 Скопировать сообщение', a:'tg_copy'}]]
+  );
+  window._contactMsg = msg;
+}
+
+/* ---------- handlers per chat ---------- */
+const handlers = {
+  artem: a => {
+    if(a==='menu'||a.startsWith('text:')){
+      botSay('artem','Выбирай, что посмотреть 👇',[
+        [{t:'🧠 LLM-демо', nav:'llm'}, {t:'📊 Бот записи', nav:'booking'}],
+        [{t:'📁 Кейсы', nav:'cases'}, {t:'🛠 Поддержка', nav:'support'}],
+        [{t:'💬 Написать мне', a:'contact'}]
+      ]);
+    } else if(a==='tg_open'){ window.open('https://t.me/'+CONFIG.telegram,'_blank'); }
+    else if(a==='tg_copy'){ copyText(window._contactMsg||'Привет, Артём!'); }
+  },
+  llm: a => {
+    if(a==='menu'){ llmMenu(); return; }
+    const answers = {
+      can:'Я делаю так, чтобы LLM-бот отвечал на вопросы клиентов текстом, а не только кнопками. В боевой версии он работает через OpenRouter, знает базу знаний компании и может передать диалог оператору.',
+      price:'Бот с LLM у меня — <b>'+CONFIG.prices.llm+'</b>. В цену входит сценарий, подключение модели, база знаний и тесты. Поддержка и токены считаются отдельно.',
+      support:'Поддержка — отдельная абонентка: <b>Старт 7 900 ₽</b>, <b>Бизнес 15 900 ₽</b>, <b>AI/LLM 22 900 ₽</b>. Токены — сверху: либо клиент платит OpenRouter напрямую, либо через меня с коэффициентом K. Подробнее в канале «Поддержка ботов».',
+      models:'Для пилота можно стартовать на бесплатных моделях OpenRouter. Для продакшена обычно нужен платный запас: у бесплатных моделей есть лимиты запросов и они не всегда подходят для стабильной работы.',
+      free:'Бесплатные модели OpenRouter подходят для демо и пилота. Там есть лимиты по запросам в день/минуту, поэтому для бизнеса с потоком клиентов я закладываю платные модели и контроль бюджета.',
+      max:'Да, я делаю ботов и для MAX, и могу перенести логику из Telegram. Перенос — <b>'+CONFIG.prices.max+'</b>, сроки обычно 3–7 дней.',
+      booking:'Запись клиентов — один из готовых сценариев. Открой чат «Бот записи • демо» и пройди его сам.',
+      shop:'Заказы и каталог — готовый сценарий. Открой чат «Бот-магазин • демо» и попробуй собрать заказ.'
+    };
+    const kb = [[{t:'⚡ Что ты умеешь?', a:'can'}, {t:'💎 Сколько стоит?', a:'price'}],
+                [{t:'🔧 Как считается поддержка?', a:'support'}, {t:'📋 Меню', a:'menu'}]];
+    if(answers[a]) botSay('llm', answers[a], kb, undefined, {excludeAction: a});
+    else llmMenu();
+  },
+  booking: a => {
+    if(a==='menu'){ startBooking(); return; }
+    if(a.startsWith('svc:')){ pickService(a.slice(4)); return; }
+    if(a.startsWith('day:')){ pickDay(a.slice(4)); return; }
+    if(a.startsWith('time:')){ pickTime(a.slice(5)); return; }
+    if(a==='contact'){ showContact('booking'); }
+  },
+  shop: a => {
+    if(a==='menu'){ startShop(); return; }
+    if(a.startsWith('add:')){ addToCart(a.slice(4)); return; }
+    if(a==='more'){ moreProducts(); return; }
+    if(a==='checkout'){ checkout(); return; }
+    if(a==='contact'){ showContact('shop'); }
+  },
+  quiz: a => {
+    if(a==='menu'){ startQuiz(); return; }
+    if(a.startsWith('task:')){ quizTask(a.slice(5)); return; }
+    if(a.startsWith('budget:')){ quizBudget(a.slice(7)); return; }
+    if(a==='contact'){ showContact('quiz'); }
+  }
+};
+
+/* ---------- init chats ---------- */
+function initChat(id){
+  if(id==='artem'){
+    botSay('artem','Привет! Я <b>Артём Гареев</b> 👋',null,350);
+    botSay('artem','Делаю ботов для <b>Telegram и MAX</b>: запись, магазины, квизы, автоматизацию. Внедряю <b>LLM</b> — бот начинает понимать текст, а не только кнопки.',null,650);
+    botSay('artem','LLM подключаю через <b>OpenRouter</b>: можно начать с бесплатных моделей для пилота, а для рабочего режима заложить платные и контроль бюджета.',null,650);
+    botSay('artem','Это портфолио устроено как Telegram: слева чаты с живыми демо, кейсами и ценами. Открывай любой 👇',[
+      [{t:'🧠 LLM-демо', nav:'llm'}, {t:'📊 Бот записи', nav:'booking'}],
+      [{t:'📁 Кейсы', nav:'cases'}, {t:'🌐 Сайты и воронки', nav:'prices'}],
+      [{t:'💬 Написать мне', a:'contact'}]
+    ],650);
+  }
+  if(id==='llm'){
+    botSay('llm','🧠 Это демо LLM-ассистента, который я делаю. В реальном проекте он отвечает через OpenRouter и знает базу знаний компании.',null,400);
+    botSay('llm','Здесь демо-режим: ответы заготовлены, но логика как у настоящего бота. Это демо. Ответы заготовлены, но логика как у настоящего бота — жми на кнопки, посмотри как работает.',[
+      [{t:'⚡ Что ты умеешь?', a:'can'}, {t:'💎 Сколько стоит?', a:'price'}],
+      [{t:'🔧 Как считается поддержка?', a:'support'}, {t:'🤖 Какие модели?', a:'models'}],
+      [{t:'🆓 А бесплатно можно?', a:'free'}, {t:'📲 А MAX?', a:'max'}]
+    ],650);
+  }
+  if(id==='booking') startBooking();
+  if(id==='shop') startShop();
+  if(id==='quiz') startQuiz();
+  if(id==='cases') initCases();
+  if(id==='support') initSupport();
+  if(id==='prices') initPrices();
+}
+
+/* ---------- LLM demo ---------- */
+function llmMenu(){
+  botSay('llm','Это демо. Ответы заготовлены, но логика как у настоящего бота — жми на кнопки, посмотри как работает.',[
+    [{t:'⚡ Что ты умеешь?', a:'can'}, {t:'💎 Сколько стоит?', a:'price'}],
+    [{t:'🔧 Как считается поддержка?', a:'support'}, {t:'🤖 Какие модели?', a:'models'}],
+    [{t:'🆓 А бесплатно можно?', a:'free'}, {t:'📲 А MAX?', a:'max'}]
+  ]);
+}
+function llmText(s){
+  let a='fallback';
+  if(/цен|стоим|скольк/.test(s)) a='price';
+  else if(/поддерж|тариф|sla|абонент/.test(s)) a='support';
+  else if(/модел|openrouter|опенроутер|llm|ии|нейро/.test(s)) a='models';
+  else if(/бесплат|free|даром/.test(s)) a='free';
+  else if(/max|макс/.test(s)) a='max';
+  else if(/запис/.test(s)) a='booking';
+  else if(/магазин|заказ|товар|кофе/.test(s)) a='shop';
+  else if(/умеешь|можешь|что ты/.test(s)) a='can';
+  if(a==='fallback'){
+    botSay('llm','Я демо-ассистент Артёма. Могу рассказать про <b>цены</b>, <b>поддержку</b>, <b>модели</b> и <b>MAX</b>. В реальном боте я ответил бы на любой вопрос из базы знаний компании 🙂',
+      [[{t:'📋 Меню вопросов', a:'menu'}]]);
+  } else handlers.llm(a);
+}
+
+/* ---------- booking ---------- */
+/* ---------- booking ---------- */
+function startBooking(){
+  state.booking={step:'svc'};
+  botSay('booking','📅 <b>Демо: бот записи для барбершопа</b><br>Сценарий как в реальном боте: услуга → имя → телефон → день → время. Выбирай услугу:',
+    [CONFIG.services.map(s=>({t:s.label, a:'svc:'+s.name})), [{t:'💬 Хочу такого же', a:'contact'}]]);}
+function pickService(name){
+  const s = CONFIG.services.find(x=>x.name===name);
+  state.booking.service=s;
+  state.booking.step='name';
+  botSay('booking','Услуга: <b>'+s.name+'</b> — '+money(s.price)+'.<br>Как тебя зовут? (напиши имя)');}
+function pickDay(d){
+  state.booking.day=d;
+  botSay('booking','Свободные слоты на <b>'+d+'</b>:',
+    [[{t:'12:00', a:'time:12:00'}, {t:'14:30', a:'time:14:30'}, {t:'17:00', a:'time:17:00'}]]);}
+function pickTime(t){
+  state.booking.time=t;
+  const s=state.booking.service;
+  botSay('booking',
+    '✅ <b>Запись создана</b> <span class="muted">(демо)</span><br><br>Услуга: <b>'+s.name+'</b> — '+money(s.price)+'<br>Имя: <b>'+state.booking.name+'</b><br>Телефон: <b>'+state.booking.phone+'</b><br>Когда: <b>'+state.booking.day+', '+t+'</b><br><br>'+
+    '<span class="muted">В реальном боте:</span> заявка уходит админу, клиенту приходит напоминание, данные пишутся в таблицу или CRM.',
+    [[{t:'💬 Хочу такого же', a:'contact'}, {t:'🔄 Пройти ещё раз', a:'menu'}]]);
+}
+
+/* ---------- shop ---------- */
+function startShop(){
+  state.cart=[];
+  state.shop={step:'none'};
+  botSay('shop','🛒 <b>Демо: бот-магазин для кофейни</b><br>Каталог → выбор товара → количество → адрес → телефон → заказ. Выбираy:',
+    [CONFIG.products.map(p=>({t:p.label, a:'add:'+p.name})), [{t:'💬 Хочу такого же', a:'contact'}]]);}
+function addToCart(name){
+  const p=CONFIG.products.find(x=>x.name===name);
+  state.cart.push(p);
+  state.shop.step='qty';
+  botSay('shop','✅ Добавлено: <b>'+p.name+'</b> — '+money(p.price)+'<br>Сколько штук добавить? (напиши цифру)');}
+function moreProducts(){
+  botSay('shop','Что добавить?',
+    [CONFIG.products.map(p=>({t:p.label, a:'add:'+p.name})), [{t:'✅ Оформить заказ', a:'checkout'}]]);}
+function checkout(){
+  if(state.shop.step!=='confirm'){ botSay('shop','Сначала укажи адрес и телефон.'); return; }
+  state.order++;
+  const total=state.cart.reduce((a,x)=>a+x.price,0)*state.shop.qty;
+  botSay('shop',
+    '✅ <b>Заказ #'+state.order+' принят</b> <span class="muted">(демо)</span><br><br>Состав: '+state.cart.map(x=>x.name+': '+x.price+' ₽').join(', ')+'<br>Количество: <b>'+state.shop.qty+'</b> шт.<br>Адрес: <b>'+state.shop.address+'</b><br>Телефон: <b>'+state.shop.phone+'</b><br>Сумма: <b>'+money(total)+'</b><br><br>'+
+    '<span class="muted">В реальном боте:</span> оплата, чек, уведомление бариста и статусы заказа — всё внутри мессенджера.',
+    [[{t:'💬 Хочу такого же', a:'contact'}, {t:'🔄 Новый заказ', a:'menu'}]]);
+}
+function finishShopOrder(){
+  const p=state.cart[state.cart.length-1];
+  const total=state.cart.reduce((a,x)=>a+x.price,0)*state.shop.qty;
+  botSay('shop',
+    '📋 <b>Предзаказ оформлен</b> <span class="muted">(демо)</span><br><br>Товар: <b>'+p.name+'</b><br>Количество: <b>'+state.shop.qty+'</b> шт.<br>Адрес доставки: <b>'+state.shop.address+'</b><br>Телефон: <b>'+state.shop.phone+'</b><br>Сумма: <b>'+money(total)+'</b><br><br>'+
+    '<span class="muted">В реальном боте:</span> заказ уходит в кухню/склад, клиенту приходит подтверждение и статус приготовления.',
+    [[{t:'💬 Хочу такого же', a:'contact'}, {t:'🔄 Новый заказ', a:'menu'}]]);
+}
+
+/* ---------- quiz ---------- */
+function startQuiz(){
+  state.quiz={};
+  botSay('quiz','🎯 <b>Демо: квиз-бот</b><br>В бизнесе он собирает заявки, а здесь подберёт бота под твою задачу.<br><br>Что нужно автоматизировать?',
+    [[{t:'📊 Запись клиентов', a:'task:запись клиентов'}, {t:'🛍️ Продажи и заказы', a:'task:продажи и заказы'}],
+     [{t:'📣 Рассылки', a:'task:рассылки'}, {t:'🔧 Поддержка / FAQ', a:'task:поддержку и FAQ'}]]);}
+function quizTask(t){
+  state.quiz.task=t;
+  botSay('quiz','Какой примерно бюджет?',
+    [[{t:'до 10 000 ₽', a:'budget:до 10 000 ₽'}, {t:'10–30 000 ₽', a:'budget:10–30 000 ₽'}],
+     [{t:'30 000 ₽ +', a:'budget:30 000 ₽ +'}, {t:'Пока не знаю', a:'budget:пока не определён'}]]);}
+function quizBudget(b){
+  state.quiz.budget=b;
+  state.quiz.step='name';
+  botSay('quiz','Как тебя зовут? (напиши имя)');}
+function finishQuiz(){
+  const rec={
+    'запись клиентов':'бот записи со слотами и напоминаниями',
+    'продажи и заказы':'бот-магазин с каталогом и оплатой',
+    'рассылки':'бот рассылок с сегментами и статистикой',
+    'поддержку и FAQ':'FAQ-бот с переводом на оператора'
+  }[state.quiz.task]||'бот под вашу задачу';
+  botSay('quiz',
+    '🧩 <b>Рекомендация</b><br><br>Задача: <b>'+state.quiz.task+'</b><br>Бюджет: <b>'+state.quiz.budget+'</b><br>Имя: <b>'+state.quiz.name+'</b><br>Контакт: <b>'+state.quiz.contact+'</b><br>Подойдёт: <b>'+rec+'</b><br><br>'+
+    '<span class="muted">В реальном квиз-боте</span> эта заявка уходит владельцу готовой формой — в личку, таблицу или CRM.',
+    [[{t:'💬 Обсудить задачу', a:'contact'}, {t:'🔄 Пройти ещё раз', a:'menu'}]]);
+}
+/* ---------- cases channel ---------- */
+function initCases(){
+  const V={views:124};
+  botSay('cases','📁 <b>Кейсы Артёма Гареева</b><br>Пока это демо-проекты — реальных клиентских внедрений ещё нет, и я не выдаю их за боевые. Каждый можно открыть и потыкать.',
+    [[{t:'🧠 Открыть LLM-демо', nav:'llm'}, {t:'📊 Бот записи', nav:'booking'}]],700,V);
+  botSay('cases','📅 <b>Бот записи</b> <span class="muted">демо</span><br>Задача: убрать ручную запись из переписки.<br>Внутри: услуги, дни, слоты, подтверждение, напоминания.<br>Стек: Python · aiogram · SQLite.<br>Срок: 5–7 дней.',
+    [[{t:'🔍 Потыкать демо', nav:'booking'}]],650,{views:98});
+  botSay('cases','🛒 <b>Бот-магазин</b> <span class="muted">демо</span><br>Задача: принимать заказы без переписки.<br>Внутри: каталог, корзина, оформление, уведомления.<br>Стек: Python · aiogram · оплата по запросу.<br>Срок: 7–10 дней.',
+    [[{t:'🔍 Потыкать демо', nav:'shop'}]],650,{views:87});
+  botSay('cases','🎯 <b>Квиз-бот</b> <span class="muted">демо</span><br>Задача: собирать заявки вместо форм на сайте.<br>Внутри: вопросы, ветвление, контакт, заявка владельцу.<br>Стек: Python · aiogram · выгрузка в таблицу.<br>Срок: 3–5 дней.',
+    [[{t:'🔍 Потыкать демо', nav:'quiz'}]],650,{views:76});
+  botSay('cases','🧠 <b>LLM-ассистент</b> <span class="muted">демо</span><br>Задача: отвечать на вопросы клиентов текстом, а не только кнопками.<br>Внутри: OpenRouter, база знаний, передача оператору.<br>Срок: 7–14 дней.',
+    [[{t:'🔍 Потыкать демо', nav:'llm'}]],650,{views:110});
+  botSay('cases','🚀 <b>Набираю первые 3 реальных проекта</b><br>Пилот со скидкой 30% в обмен на отзыв и разрешение показать цифры. Пиши — обсудим задачу.',
+    [[{t:'💬 Обсудить пилот', a:'contact'}]],650,{views:132});
+}
+
+/* ---------- support channel ---------- */
+function initSupport(){
+  const V={views:156};
+  botSay('support','🛠 <b>Поддержка — это не «починить, если сломается»</b><br>Это мониторинг, обновления API, бэкапы, контроль токенов и развитие сценариев. Вы платите за то, чтобы бот работал и приносил заявки.',
+    [[{t:'🧮 Калькулятор', a:'calc'}, {t:'💬 Обсудить', a:'contact'}]],700,V);
+  botSay('support','📦 <b>Тарифы</b><br><br>🟢 <b>Старт — 7 900 ₽/мес</b><br><span class="muted">хостинг, мониторинг, бэкапы, мелкие правки, реакция до 24 ч</span><br><br>🟡 <b>Бизнес — 15 900 ₽/мес</b><br><span class="muted">всё из Старта + 3–5 ч доработок, приоритет, отчёт по метрикам, реакция до 4 ч</span><br><br>🔵 <b>AI / LLM — 22 900 ₽/мес</b><br><span class="muted">всё из Бизнеса + подбор моделей, fallback, лимиты бюджета, отчёт по стоимости диалога</span>',
+    [[{t:'🧮 Посчитать стоимость', a:'calc'}]],700,{views:143});
+  botSay('support','🔑 <b>Токены и OpenRouter — прозрачно</b><br><br>1️⃣ <b>Ваш аккаунт OpenRouter</b>: вы платите OpenRouter напрямую. Я настраиваю модели, лимиты и бюджет — свои деньги я не трачу.<br>2️⃣ <b>Мой аккаунт OpenRouter</b>: я вношу депозит заранее и трачу только его. Никаких трат из моего личного кармана. Коэффициент на токены зависит от числа пользователей:<br>• до 300 пользователей — <b>K=1.4</b><br>• 300–1500 — <b>K=1.25</b><br>• 1500+ — <b>K=1.15</b><br><br>Каждый месяц приходит отчёт: сколько сообщений бот обработал, сколько токенов, сколько это стоило.',
+    [[{t:'🧮 Калькулятор', a:'calc'}]],700,{views:121});
+  botSay('support','🛡 <b>SLA и фишки, которых обычно нет</b><br><br>• Бот не работает &gt; 4 часов по моей вине → <b>скидка 25%</b> на следующий месяц; &gt; 24 часов → <b>скидка 50%</b>.<br>• Код и аккаунты остаются у вас, уход без штрафов.<br>• Цена тарифа фиксируется на 6 месяцев.<br>• Ежемесячный отчёт: что работает, что улучшить.',
+    [[{t:'💬 Подключить поддержку', a:'contact'}]],700,{views:139});
+}
+
+/* ---------- prices channel ---------- */
+function initPrices(){
+  const V={views:167};
+  botSay('prices','💰 <b>Разработка</b><br><br>🟢 Простой бот — <b>'+CONFIG.prices.simple+'</b> · 3–5 дней<br><span class="muted">меню, FAQ, сбор заявок</span><br><br>🟡 Бизнес-бот — <b>'+CONFIG.prices.business+'</b> · 7–12 дней<br><span class="muted">запись, магазин, квиз, интеграции</span><br><br>🔵 Бот с LLM — <b>'+CONFIG.prices.llm+'</b> · 10–16 дней<br><span class="muted">OpenRouter, база знаний, оператор, контроль бюджета. Работает в Telegram и MAX</span><br><br>📲 Перенос в MAX — <b>'+CONFIG.prices.max+'</b> · 3–7 дней<br><br><span class="muted">Важно: бот в MAX возможен только если у клиента есть бизнес-аккаунт (ИП/самозанятый/ООО) на business.max.ru. Я пишу код под токен клиента.</span>' +
+    '<br><br>🌐 <b>Сайты и воронки</b> — от 15 000 ₽<br><span class="muted">Landing-page, сайт-визитка, воронка продаж. Постоянная поддержка, сбор статистики, улучшения, правки по ходу.</span>',
+    [[{t:'💬 Обсудить проект', a:'contact'}, {t:'📁 Кейсы', nav:'cases'}]],700,V);
+  botSay('prices','🧭 <b>Как строится работа</b><br><br>1. Короткий бриф: задача, пользователи, бюджет.<br>2. Смета и срок — фиксируем до начала.<br>3. Прототип: показываю кликабельный сценарий.<br>4. Разработка и тесты.<br>5. Запуск + инструкция.<br>6. Поддержка — отдельный тариф.',
+    [[{t:'🛠 Тарифы поддержки', nav:'support'}]],650,{views:118});
+  botSay('prices','🎁 <b>Первым 3 клиентам</b><br>Пилот со скидкой 30% в обмен на отзыв и разрешение показать результат. После запуска можно подключить поддержку.',
+    [[{t:'💬 Забрать пилот', a:'contact'}]],650,{views:149});
+}
+
+/* ---------- calculator ---------- */
+function kFor(users){
+  if(users<=300) return 1.4;
+  if(users<=1500) return 1.25;
+  return 1.15;
+}
+// Примерная себестоимость токенов на одно сообщение бота (среднее по недорогим моделям OpenRouter)
+const TOKEN_COST_PER_MSG = 0.03; // ₽
+function openCalc(){ $('calcModal').classList.add('show'); calcUpdate(); }
+function closeCalc(){ $('calcModal').classList.remove('show'); }
+function calcUpdate(){
+  const tariff=$('calcTariff').value;
+  const users=Math.max(0, parseInt($('calcUsers').value||'0',10));
+  const msgs=Math.max(0, parseInt($('calcMsgs').value||'0',10));
+  const acc=document.querySelector('input[name="calcAcc"]:checked').value;
+  const base=CONFIG.support[tariff];
+  const k=kFor(users);
+  const totalMsgs = users*msgs;
+  const tokenCost = acc==='artem' ? Math.round(totalMsgs * TOKEN_COST_PER_MSG * k) : 0;
+  const total = base + tokenCost;
+  $('calcBase').textContent=money(base);
+  const tokenRow = $('calcTokenRow');
+  const tokenCostEl = $('calcTokenCost');
+  if(acc==='artem'){
+    tokenRow.style.display='';
+    tokenCostEl.textContent = money(tokenCost);
+  } else {
+    tokenRow.style.display='none';
+    tokenCostEl.textContent = '—';
+  }
+  $('calcTotal').textContent=money(total);
+  $('calcNote').innerHTML = acc==='artem'
+    ? 'Расход считается автоматически: <b>'+totalMsgs.toLocaleString('ru-RU')+' сообщений/мес</b>. Перед стартом вы вносите депозит — я трачу только его, свои деньги не трачу. Каждый месяц — отчёт по токенам и стоимости диалога.'
+    : 'Вы платите OpenRouter напрямую. Я настраиваю модели, лимиты и бюджет в рамках тарифа.';
+}
+['calcTariff','calcUsers','calcMsgs'].forEach(id=>$(id).addEventListener('input',calcUpdate));
+document.querySelectorAll('input[name="calcAcc"]').forEach(r=>r.addEventListener('change',calcUpdate));
+$('calcClose').onclick=closeCalc;
+$('calcModal').onclick=e=>{ if(e.target===$('calcModal')) closeCalc(); };
+
+/* ---------- misc ---------- */
+function copyText(t){
+  const done=()=>toast('Скопировано ✅');
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(done).catch(()=>fallbackCopy(t,done));
+  } else fallbackCopy(t,done);
+}
+function fallbackCopy(t,done){
+  const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta);
+  ta.select(); try{document.execCommand('copy'); done();}catch(e){toast('Скопируй вручную: '+t);} ta.remove();
+}
+let toastTimer;
+function toast(t){
+  let el=document.getElementById('toast');
+  if(!el){ el=document.createElement('div'); el.id='toast';
+    el.style.cssText='position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#17212b;color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.35);';
+    document.body.appendChild(el);
+  }
+  el.textContent=t; el.style.opacity='1';
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>{el.style.opacity='0';},2600);
+}
+
+/* ---------- theme / search ---------- */
+$('themeBtn').onclick=()=>{
+  const dark=document.documentElement.getAttribute('data-theme')==='dark';
+  document.documentElement.setAttribute('data-theme', dark?'light':'dark');
+  $('themeBtn').textContent=dark?'☾':'☀';
+  try{localStorage.setItem('portfolio-theme', dark?'light':'dark');}catch(e){}
+};
+try{
+  const saved=localStorage.getItem('portfolio-theme');
+  if(saved){ document.documentElement.setAttribute('data-theme',saved); $('themeBtn').textContent=saved==='dark'?'☀':'☾'; }
+}catch(e){}
+$('searchInput').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  document.querySelectorAll('.chat-item').forEach(i=>{
+    const c=chatById(i.dataset.id);
+    i.style.display = c.name.toLowerCase().includes(q)||c.preview.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
+
+/* ---------- global actions for contact buttons ---------- */
+const _origHandle = handleAction;
+handleAction = function(id, action){
+  if(action==='tg_open'){ window.open('https://t.me/'+CONFIG.telegram,'_blank'); return; }
+  if(action==='tg_copy'){ copyText(window._contactMsg||'Привет, Артём!'); return; }
+
+  _origHandle(id, action);
+};
+
+/* ---------- boot ---------- */
+buildUI();
+if(window.innerWidth>860){ openChat('artem'); }
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5a89cc6c9d65fc4',t:'MTc5NDY4NjUzMQ=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5a89cc6c9d65fc4',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
